@@ -1,19 +1,47 @@
+let swRegistration = " ";
+let permission = " ";
 const shoppingList = document.querySelector('.list-group');
 const form = document.querySelector('#listForm');
 const listInput = document.querySelector('#listInput');
 const listItem = document.querySelector('.listItem');
-//clearBtn = document.querySelector('#clearBtn')
 
-// Load all event listners
-allEventListners();
+const pushAudio = new Audio("../audio/iron_man_repulsor.mp3");
+
+const pushNotifications = async () => {
+  //check();
+  swRegistration = await registerServiceWorker();
+  permission =  await requestNotificationPermission();
+  showLocalNotification('SUPERHERO SHOPPING', 'Notifications Activated.', swRegistration);
+}
 
 // Functions of all event listners
 function allEventListners() {
     form.addEventListener('submit', addToList);
     shoppingList.addEventListener('click', removeItem);
-    //clearBtn.addEventListener('click', clearTodoList);
 }
 
+const registerServiceWorker = async () => {
+  const swRegistration = await navigator.serviceWorker.register('../service-worker.js'); //notice the file name
+    return swRegistration;
+}
+
+const requestNotificationPermission = async () => {
+  const permission = await window.Notification.requestPermission();
+  if(permission !== 'granted'){
+      throw new Error('Permission not granted for Notification');
+  }
+}
+
+const showLocalNotification = (title, body, swRegistration) => {
+  const options = {
+    body: body,
+    icon: "../images/icons/icon-128x128.png",
+    badge: "../images/icons/icon-128x128.png",
+    vibrate: [100, 50, 100],
+  }
+  playAudio();
+  swRegistration.showNotification(title, options);
+}
 
 function addToList(e) {
   if (listInput.value !== '') {
@@ -29,6 +57,8 @@ function addToList(e) {
     shoppingList.appendChild(li);
 
     listInput.value = '';
+    // playAudio();
+    showLocalNotification('SUPERHERO SHOPPING', 'Item added.', swRegistration);
   } 
   e.preventDefault();
 }
@@ -36,67 +66,23 @@ function addToList(e) {
 function removeItem(e) {
   if (e.target.classList.contains('fa-trash-alt')) {
     e.target.parentElement.remove();
+    showLocalNotification('SUPERHERO SHOPPING', 'Item deleted.', swRegistration);
   }
 
   if (e.target.classList.contains('todo-text')) {
       e.target.parentElement.classList.toggle('done');
+      showLocalNotification('SUPERHERO SHOPPING', 'Item done.', swRegistration);
   }
   if (e.target.classList.contains('done-icon')) {
       e.target.parentElement.classList.toggle('done');
+      showLocalNotification('SUPERHERO SHOPPING', 'Item done.', swRegistration);
   }
 }
 
+function playAudio() { 
+  pushAudio.volume = 0.1;
+  pushAudio.play(); 
+}
 
-(function() {
-  'use strict';
-
-  var app = {
-
-
-  };
- 
-
-
-  //Login
-
-  app.toggleLoginButton = function(status) {
-    if(status == 'Login'){
-      document.getElementById('butLogin').innerHTML = 'Logout'
-    }
-    else if(status == 'Logout'){
-      document.getElementById('butLogin').innerHTML = 'Login'
-    }
-  }
-
-  // TODO add service worker code here
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-             .register('../service-worker.js')
-             .then(
-               function() { 
-                  console.log('Service Worker Registered.'); 
-                });
-
-    navigator.serviceWorker.addEventListener('message', function (event) {
-      console.log(event.data);
-      app.toggleLoginButton(event.data);
-    }) 
-  }
-
-  //zuerst mit MessageChannel gemacht, und nach 3 stunden aufgegben, weil es nicht gescheid ging.
-
-  //Login / Logout
-  document.getElementById('butLogin').addEventListener('click', function() {
-    app.loginUser();
-  });
-
-  app.loginUser = function() {    
-    //status entweder Login oder Logout
-    var status = document.getElementById('butLogin').innerHTML;
-    var msg = status;
-    navigator.serviceWorker.controller.postMessage(msg);
-  };
-
-
-
-})();
+pushNotifications();
+allEventListners();

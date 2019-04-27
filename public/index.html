@@ -30,14 +30,13 @@
 
   <header class="header">
     <h1 class="header__title">Superhero Shopping</h1>
-    <button id="butAdd" class="headerButton" aria-label="Add"></button>
-    <button id="butLogin" class="loginButton" aria-label="Login">Login</button>
+    <button id="permission-btn" class="notificationButton" onclick="pushNotifications()"><i class="fa fa-bell" aria-hidden="true"></i></button>
   </header>
 
   <main class="main">
     <form id="listForm">
       <input id="listInput" placeholder="Add Item To List">
-      <button type="button" class="custom-button">
+      <button type="button" class="custom-button" onclick="addToList()">
       </button>
     </form>
     <ul class="list-group" id="shoppingList">
@@ -55,14 +54,6 @@
       </li>
     </ul>
   </div>
-
-  <script>
-    if('serviceWorker' in navigator) {
-      navigator.serviceWorker
-                .register('/service-worker.js')
-                .then(function() { console.log("Service Worker Registered"); });
-    }
-  </script>
 
   <script src="scripts/app.js" async></script>
 
