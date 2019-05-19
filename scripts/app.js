@@ -7,36 +7,64 @@ const listInput = document.querySelector('#listInput');
 const listItem = document.querySelector('.listItem');
 const loginButton = document.querySelector('#login-btn')
 const notificationButton = document.querySelector('#permission-btn');
-
 const pushAudio = new Audio("../audio/iron_man_repulsor.mp3");
 
-//Firebase
 var config = {
   apiKey: "AIzaSyB8tLQ6sxchB8fau4g5LlX9FecO15hy4yo",
   authDomain: "superheroshopping-3430c.firebaseapp.com",
   databaseURL: "https://superheroshopping-3430c.firebaseio.com/",
+  projectId: 'superheroshopping-3430c',
   messagingSenderId: "214142605751"
 };
 firebase.initializeApp(config);
-var provider = new firebase.auth.GoogleAuthProvider();
 
-const installServiceWorker = async () => {
+let db = firebase.firestore();
+firebase.firestore().enablePersistence(); // für offline
+
+const pushNotifications = async () => {
   swRegistration = await registerServiceWorker();
+  //permission =  await requestNotificationPermission();
+  //showLocalNotification('SUPERHERO SHOPPING', 'Notifications Activated.', swRegistration);
 }
 
+const registerServiceWorker = async () => {
+  const swRegistration = await navigator.serviceWorker.register('../service-worker.js'); //notice the file name
+    return swRegistration;
+}
+
+// const requestNotificationPermission = async () => {
+//   const permission = await window.Notification.requestPermission();
+//   if(permission !== 'granted'){
+//       throw new Error('Permission not granted for Notification');
+//   }
+// }
+
+//Firebase
+var provider = new firebase.auth.GoogleAuthProvider();
 const messaging = firebase.messaging();
 
 messaging.onMessage(function(payload) {
   console.log('onMessage: ', payload);
 })
 
+
 firebase.auth().onAuthStateChanged(function(user) { 
   if(user){
     loginButton.innerHTML = user.displayName + "   | Logout";
-    var ref = firebase.database().ref('lists/' + user.uid);
-    ref.on('value', function(snapshot) {
-      showList(snapshot.val());
-    });
+    
+    getListItems(user.uid);
+    // let ref = db.collection('lists/').doc(user.uid);
+    // ref.get().then((querySnapshot) => {
+    //   console.log(querySnapshot);
+      // querySnapshot.forEach((snap) => {
+      //   console.log(snap)
+      //   showList(snap.val());
+      //   // console.log(`${doc.id} => ${doc.data()}`);
+      // });
+    // });
+    // ref.on('value', function(snapshot) {
+    //   showList(snapshot.val());
+    // });
     if(Notification.permission == "granted") {
       notificationButton.style.color = '#393';
       notificationButton.innerHTML += '  ON' 
@@ -49,6 +77,19 @@ firebase.auth().onAuthStateChanged(function(user) {
     console.log("User is logged out");
   }
 });
+
+async function getListItems(userId) {
+  let list = new window.Object();
+
+  const snapshot = await firebase.firestore().collection('lists/').doc(userId).collection('list/').get()
+  snapshot.docs.map((doc) => {
+    let key = doc.id;
+    let value = doc.data().item
+    list[key] = value;
+    console.log(list);
+  });
+  showList(list)
+}
 
 function showList(list) {
   if(!gotData) {
@@ -93,11 +134,6 @@ function allEventListners() {
     notificationButton.addEventListener('click', subscribeNotification);
 }
 
-const registerServiceWorker = async () => {
-  const swRegistration = await navigator.serviceWorker.register('../service-worker.js');
-    return swRegistration;
-}
-
 const subscribeToNotification = async () => {
   // const permission = await window.Notification.requestPermission();
   messaging.requestPermission()
@@ -121,6 +157,8 @@ function handleTokenRefresh() {
         token: token,
         uid: firebase.auth().currentUser.uid
       })
+
+      //let ref = firebase.firestore().collection('tokens/');
     })
 }
 
@@ -167,16 +205,27 @@ function addToList(e) {
     span.appendChild(document.createTextNode(listInput.value));
     li.appendChild(span);
     shoppingList.appendChild(li);
-    addToFirebaseDatabase(listInput.value);
+    addToItemFirebaseDatabase(listInput.value, li);
 
     listInput.value = '';
     // playAudio();
   } 
 }
 
-function addToFirebaseDatabase(listInput) {
+function addToItemFirebaseDatabase(listInput, li) {
+  console.log(li);
   let myUserId = firebase.auth().currentUser.uid;
-  firebase.database().ref('lists/' + myUserId).push(listInput);
+  let ref = db.collection('lists/').doc(myUserId).collection('list')
+  ref.add({ item: listInput})
+    .then(function(docRef) {
+        console.log("Document written with ID: ", docRef.id);
+        li.key = docRef.id;
+    })
+    .catch(function(error) {
+        console.error("Error adding document: ", error);
+    });
+  // let myUserId = firebase.auth().currentUser.uid;
+  // firebase.database().ref('lists/' + myUserId).push(listInput);
 }
 
 function removeItem(e) {
@@ -184,7 +233,11 @@ function removeItem(e) {
   if (e.target.classList.contains('fa-trash-alt')) {
     e.target.parentElement.remove();
 
-    firebase.database().ref('lists/' + myUserId + '/' + e.target.parentElement.key).remove();
+    db.collection('lists/').doc(myUserId).collection('list').doc(e.target.parentElement.key).delete().then(function() {
+      console.log("Document successfully deleted!");
+    }).catch(function(error) {
+        console.error("Error removing document: ", error);
+    });
   }
 
   if (e.target.classList.contains('todo-text')) {
@@ -199,23 +252,48 @@ function removeItem(e) {
 
 function updateEntry(key, myUserId) {
   let itemValue = '';
-  let ref = firebase.database().ref('lists/' + myUserId);
-  var updates = {};
-  ref.on('value', (snapshot) => {
-    snapshot.forEach((snap) => {
-      if(snap.key == key) {
-        if(snap.val().indexOf('--done') !== -1) {
-          itemValue = snap.val().replace('--done','');
-          updates[key] = itemValue;
+  let ref = db.collection('lists/').doc(myUserId).collection('list').doc(key)
+  let updates = {};
+
+  ref.get().then((doc) =>{
+    if (doc.exists) {
+        itemValue = doc.data().item;
+        if(itemValue.indexOf('--done') !== -1) {
+          itemValue = itemValue.replace('--done','');
+          updates = {
+            item: itemValue
+          }
+          updateData(key, myUserId ,updates);
         }
         else {
-          itemValue = snap.val() + '--done';
-          updates[key] = itemValue;
+          itemValue = itemValue + '--done';
+          updates = {
+            item: itemValue
+          }
+          updateData(key, myUserId ,updates);
         }
-      }
-    });
+    } else {
+        // doc.data() will be undefined in this case
+        console.log("No such document!");
+        return;
+    }
+  }).catch(function(error) {
+      console.log("Error getting document:", error);
+      return;
   });
-  ref.update(updates);
+}
+
+function updateData(key, myUserId, updates) {
+  let ref = db.collection('lists/').doc(myUserId).collection('list').doc(key)
+  
+  ref.update(updates)
+  .then(function() {
+    console.log("Document successfully updated!");
+  })
+  .catch(function(error) {
+      // The document probably doesn't exist.
+      console.error("Error updating document: ", error);
+  });
 }
 
 function login() {
@@ -261,4 +339,5 @@ function playAudio() {
   pushAudio.play(); 
 }
 
+pushNotifications();
 allEventListners();

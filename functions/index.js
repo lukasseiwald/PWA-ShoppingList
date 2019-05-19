@@ -3,9 +3,8 @@ const admin = require('firebase-admin');
 
 admin.initializeApp(functions.config().firebase);
 
-exports.sendNotifications = functions.database.ref('lists/{userId}').onWrite((event) => {
+exports.modifyList = functions.firestore.document('lists/{userId}/list/{listId}').onWrite((snap, context) => {
 
-    const NOTIFICATION_SNAPSHOT = event.data;
     const payload = {
         notification: {
             title: 'List has updated.',
