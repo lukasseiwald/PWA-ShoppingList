@@ -8,7 +8,8 @@ exports.modifyList = functions.firestore.document('lists/{userId}/list/{listId}'
     const payload = {
         notification: {
             title: 'List has updated.',
-            body: 'Item Added / Changed.'
+            body: 'Item Added / Changed.',
+            icon: '../images/icons/icon-72x72.png'
         }
     }
 

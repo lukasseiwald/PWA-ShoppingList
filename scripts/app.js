@@ -7,7 +7,28 @@ const listInput = document.querySelector('#listInput');
 const listItem = document.querySelector('.listItem');
 const loginButton = document.querySelector('#login-btn')
 const notificationButton = document.querySelector('#permission-btn');
-const pushAudio = new Audio("../audio/iron_man_repulsor.mp3");
+
+let audio1 = new Audio("../audio/all.mp3");
+let audio2 = new Audio("../audio/awful.mp3");
+let audio3 = new Audio("../audio/bathroom.mp3");
+let audio4 = new Audio("../audio/caught.mp3");
+let audio5 = new Audio("../audio/christmas.mp3");
+let audio6 = new Audio("../audio/condition.mp3");
+let audio7 = new Audio("../audio/cooler.mp3");
+let audio8 = new Audio("../audio/core.mp3");
+let audio9 = new Audio("../audio/expert.mp3");
+let audio10 = new Audio("../audio/hard.mp3");
+let audio11 = new Audio("../audio/hardware.mp3");
+let audio12 = new Audio("../audio/home.mp3");
+let audio13 = new Audio("../audio/myspace.mp3");
+let audio14 = new Audio("../audio/myturn.mp3");
+let audio15 = new Audio("../audio/privatized.mp3");
+let audio16 = new Audio("../audio/sick.mp3");
+let audio17 = new Audio("../audio/trust.mp3");
+let audio18 = new Audio("../audio/wantone.mp3");
+let audio19 = new Audio("../audio/iron_man_repulsor.mp3");
+let sounds = [audio1, audio2, audio3, audio4, audio5, audio6, audio7, audio8, audio9, audio10, audio11, audio12, audio13, audio14, audio15, audio16, audio17, audio18, audio19]
+let currentSound;
 
 var config = {
   apiKey: "AIzaSyB8tLQ6sxchB8fau4g5LlX9FecO15hy4yo",
@@ -193,6 +214,7 @@ function handleTokenRefresh() {
 // }
 
 function addToList(e) {
+  playRandomSound();
   e.preventDefault();
   if (listInput.value !== '') {
     const li = document.createElement('li');
@@ -208,12 +230,10 @@ function addToList(e) {
     addToItemFirebaseDatabase(listInput.value, li);
 
     listInput.value = '';
-    // playAudio();
   } 
 }
 
 function addToItemFirebaseDatabase(listInput, li) {
-  console.log(li);
   let myUserId = firebase.auth().currentUser.uid;
   let ref = db.collection('lists/').doc(myUserId).collection('list')
   ref.add({ item: listInput})
@@ -229,28 +249,34 @@ function addToItemFirebaseDatabase(listInput, li) {
 }
 
 function removeItem(e) {
-  let myUserId = firebase.auth().currentUser.uid;
   if (e.target.classList.contains('fa-trash-alt')) {
     e.target.parentElement.remove();
-
-    db.collection('lists/').doc(myUserId).collection('list').doc(e.target.parentElement.key).delete().then(function() {
-      console.log("Document successfully deleted!");
-    }).catch(function(error) {
-        console.error("Error removing document: ", error);
-    });
+    deleteEntry(e.target.parentElement.key);
   }
-
-  if (e.target.classList.contains('todo-text')) {
-      e.target.parentElement.classList.toggle('done');      
-      updateEntry(e.target.parentElement.key, myUserId);
+  else if (e.target.classList.contains('todo-text')) {
+      e.target.parentElement.classList.toggle('done'); 
+      playRandomSound();     
+      updateEntry(e.target.parentElement.key);
   }
-  if (e.target.classList.contains('done-icon')) {
+  else if (e.target.classList.contains('done-icon')) {
       e.target.parentElement.classList.toggle('done');
-      updateEntry(e.target.parentElement.key, myUserId);
+      playRandomSound();
+      updateEntry(e.target.parentElement.key);
   }
 }
 
-function updateEntry(key, myUserId) {
+function deleteEntry(key) {
+  let myUserId = firebase.auth().currentUser.uid;
+
+  db.collection('lists/').doc(myUserId).collection('list').doc(e.target.parentElement.key).delete().then(function() {
+    console.log("Document successfully deleted!");
+  }).catch(function(error) {
+      console.error("Error removing document: ", error);
+  });
+}
+
+function updateEntry(key) {
+  let myUserId = firebase.auth().currentUser.uid;
   let itemValue = '';
   let ref = db.collection('lists/').doc(myUserId).collection('list').doc(key)
   let updates = {};
@@ -297,7 +323,6 @@ function updateData(key, myUserId, updates) {
 }
 
 function login() {
-  playAudio();
   if(loginButton.innerHTML.indexOf("Logout") !== -1){
     firebase.auth().signOut().then(function() {
       loginButton.innerHTML = "Login";
@@ -329,7 +354,7 @@ function login() {
 
 function subscribeNotification() {
   if(Notification.permission !== "granted") { 
-    playAudio();
+    playRandomSound();
     subscribeToNotification();
   }
 }
@@ -338,6 +363,13 @@ function playAudio() {
   pushAudio.volume = 0.1;
   pushAudio.play(); 
 }
+
+function playRandomSound(){
+  var soundFile = sounds[Math.floor(Math.random()*sounds.length)];
+  soundFile.volume = 0.2;
+  soundFile.play(); 
+}
+
 
 pushNotifications();
 allEventListners();
